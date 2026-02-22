@@ -128,14 +128,17 @@ final class blocipadwoo_store {
             ]);
         }
     
-        // Check for duplicate IP
+        // Check for duplicate IP for same blocktype and category
         $existing = $wpdb->get_var(
-            $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE ipaddress = %s", $ipaddress)
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE ipaddress = %s AND blocktype = %s AND blkcategory = %s",
+                $ipaddress, $blocktype, $blkcategory
+            )
         );
         if ($existing > 0) {
             return rest_ensure_response([
                 'status' => 'error',
-                'message' => 'This IP address is already blocked.'
+                'message' => 'This IP address is already blocked for this block type and category.'
             ]);
         }
 
@@ -326,34 +329,85 @@ final class blocipadwoo_store {
         $table_name = $wpdb->prefix . 'wooip_blockip_list';
         $user_ip = $this->blocipadwoo_get_user_ip();
 
-        $blocked_ip = $wpdb->get_var($wpdb->prepare(
-            "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND startdate <= NOW() AND enddate >= NOW()",
-            $user_ip
-        ));
-        return !empty($blocked_ip);
+        // Home page block
+        if (is_front_page()) {
+            $blocked_ip = $wpdb->get_var($wpdb->prepare(
+                "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND blocktype = 'home' AND startdate <= NOW() AND enddate >= NOW()",
+                $user_ip
+            ));
+            if (!empty($blocked_ip)) return true;
+        }
+
+        // Shop page block
+        if (is_shop()) {
+            $blocked_ip = $wpdb->get_var($wpdb->prepare(
+                "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND blocktype = 'shop' AND startdate <= NOW() AND enddate >= NOW()",
+                $user_ip
+            ));
+            if (!empty($blocked_ip)) return true;
+        }
+
+        // Category-wise block
+        if (is_product_category()) {
+            $category = get_queried_object();
+            $cat_id = $category ? $category->term_id : 0;
+            $blocked_ip = $wpdb->get_var($wpdb->prepare(
+                "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND blkcategory = %s AND startdate <= NOW() AND enddate >= NOW()",
+                $user_ip, $cat_id
+            ));
+            if (!empty($blocked_ip)) return true;
+        }
+
+        return false;
     }
 
     /* ======== Redirects the user to the blocked IP's redirect URL. ======== */
     
     public function blocipadwoo_from_shop() {
-        
-        if (is_shop() && $this->blocipadwoo_ip_blocked()) {
-            // Get the user's IP address
-            $user_ip = $this->blocipadwoo_get_user_ip();
-            
-            // Fetch the redirect URL for the blocked IP from the database
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'wooip_blockip_list';
-            
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'wooip_blockip_list';
+        $user_ip = $this->blocipadwoo_get_user_ip();
+
+        // Home page block
+        if (is_front_page()) {
             $redirect_url = $wpdb->get_var($wpdb->prepare(
-                "SELECT redirect FROM $table_name WHERE ipaddress = %s AND startdate <= NOW() AND enddate >= NOW()",
+                "SELECT redirect FROM $table_name WHERE ipaddress = %s AND blocktype = 'home' AND startdate <= NOW() AND enddate >= NOW()",
                 $user_ip
             ));
-            // If a redirect URL is found, redirect the user
             if ($redirect_url) {
                 wp_redirect($redirect_url);
-                exit; // Make sure to exit after the redirect
-            } else {
+                exit;
+            } elseif ($this->blocipadwoo_ip_blocked()) {
+                wp_die('Access Denied: Your IP has been blocked from this page.', 'Access Denied', ['response' => 403]);
+            }
+        }
+
+        // Shop page block
+        if (is_shop()) {
+            $redirect_url = $wpdb->get_var($wpdb->prepare(
+                "SELECT redirect FROM $table_name WHERE ipaddress = %s AND blocktype = 'shop' AND startdate <= NOW() AND enddate >= NOW()",
+                $user_ip
+            ));
+            if ($redirect_url) {
+                wp_redirect($redirect_url);
+                exit;
+            } elseif ($this->blocipadwoo_ip_blocked()) {
+                wp_die('Access Denied: Your IP has been blocked from this page.', 'Access Denied', ['response' => 403]);
+            }
+        }
+
+        // Category-wise block
+        if (is_product_category()) {
+            $category = get_queried_object();
+            $cat_id = $category ? $category->term_id : 0;
+            $redirect_url = $wpdb->get_var($wpdb->prepare(
+                "SELECT redirect FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND blkcategory = %s AND startdate <= NOW() AND enddate >= NOW()",
+                $user_ip, $cat_id
+            ));
+            if ($redirect_url) {
+                wp_redirect($redirect_url);
+                exit;
+            } elseif ($this->blocipadwoo_ip_blocked()) {
                 wp_die('Access Denied: Your IP has been blocked from this page.', 'Access Denied', ['response' => 403]);
             }
         }
