@@ -1,0 +1,19 @@
+{
+  "name": "woo-block",
+  "version": "1.0.0",
+  "main": "build/index.js",
+  "scripts": {
+    "start": "wp-scripts start",
+    "build": "wp-scripts build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.6"
+  },
+  "dependencies": {
+    "react-hot-toast": "^2.5.2"
+  }
+}
