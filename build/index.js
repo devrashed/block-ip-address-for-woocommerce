@@ -5207,7 +5207,7 @@ const NewIp = ({
             value: "",
             children: "Select a category"
           }), categories.map(cat => /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_2__.jsx)("option", {
-            value: cat.id,
+            value: cat.name,
             children: cat.name
           }, cat.id))]
         })]

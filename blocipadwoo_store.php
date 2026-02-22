@@ -347,13 +347,13 @@ final class blocipadwoo_store {
             if (!empty($blocked_ip)) return true;
         }
 
-        // Category-wise block
+        // Category-wise block (using category name)
         if (is_product_category()) {
             $category = get_queried_object();
-            $cat_id = $category ? $category->term_id : 0;
+            $cat_name = $category ? $category->name : '';
             $blocked_ip = $wpdb->get_var($wpdb->prepare(
                 "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND blkcategory = %s AND startdate <= NOW() AND enddate >= NOW()",
-                $user_ip, $cat_id
+                $user_ip, $cat_name
             ));
             if (!empty($blocked_ip)) return true;
         }
@@ -396,13 +396,13 @@ final class blocipadwoo_store {
             }
         }
 
-        // Category-wise block
+        // Category-wise block (using category name)
         if (is_product_category()) {
             $category = get_queried_object();
-            $cat_id = $category ? $category->term_id : 0;
+            $cat_name = $category ? $category->name : '';
             $redirect_url = $wpdb->get_var($wpdb->prepare(
                 "SELECT redirect FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND blkcategory = %s AND startdate <= NOW() AND enddate >= NOW()",
-                $user_ip, $cat_id
+                $user_ip, $cat_name
             ));
             if ($redirect_url) {
                 wp_redirect($redirect_url);
