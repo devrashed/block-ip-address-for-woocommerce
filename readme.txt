@@ -1,18 +1,18 @@
 === Block IP Address for WooCommerce ===
 Contributors: wpcraftnet, khan9   
-Tags: WooCommerce, IP block, redirect, shop page block
+Tags: WooCommerce, block IP address, shop
 Requires at least: 5.5  
-Tested up to: 6.8  
+Tested up to: 6.9.1 
 Requires PHP: 7.2  
-Stable tag: 1.0.0  
+Stable tag: 1.0.2  
 License: GPLv2 or later  
 License URI: https://www.gnu.org/licenses/gpl-2.0.html  
 
-Block unwanted IPs from accessing your WooCommerce shop. Redirect them to another page and control access with start and end dates.
+Block unwanted IPs from accessing your WooCommerce shop,home and specific category redirect them to another page and control access with start and end dates.
 
 == Description ==
 
-The **WC Block IP Address** plugin allows you to restrict access to your WooCommerce shop page based on specific IP addresses. If a visitor's IP address matches a blocked entry, they will be redirected to a custom page of your choice instead of being able to view the shop.
+The **WC Block IP Address** plugin allows you to restrict access to your **WooCommerce Shop, Home and Specific Category** based on specific IP addresses. If a visitor's IP address matches a blocked entry, they will be redirected to a custom page of your choice instead of being able to view the shop.
 
 You can also **set a start and end date** for each blocked IP, enabling **time-based restrictions** for more flexible access control.
 
@@ -24,7 +24,9 @@ This plugin is ideal for:
 **Key Features:**
 - Easily add & manage blocked IP addresses.
 - Define **block duration** using start and end dates.
-- Redirect blocked IPs to any page (e.g., home, contact, or a custom notice page).
+- Redirect blocked **IPs to Shop Page.**
+- Redirect blocked **IPs to Home Page.**
+- Redirect blocked **IPs to Specific Category.**
 - Lightweight and simple to configure.
 - Compatible with the latest WooCommerce and WordPress versions.
 
@@ -60,10 +62,13 @@ Yes, the plugin is compatible with most major caching plugins.
 
 == Changelog ==
 
-= 1.0.0 =  
+= 1.0.2 =  
+* Initial release with support for blocking IP addresses and defining block duration using start and end dates.
+
+= 1.0.1 =  
 * Initial release with support for blocking IP addresses and defining block duration using start and end dates.
 
 == Upgrade Notice ==
 
 = 1.0.0 =  
-First stable release of WC Block IP Address with block duration and redirection features.
+* Initial release with support for blocking IP addresses and defining block duration using start and end dates.

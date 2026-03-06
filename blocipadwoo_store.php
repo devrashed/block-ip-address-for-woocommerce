@@ -2,9 +2,9 @@
 /**
  * Plugin Name: Block IP Address for WooCommerce
  * Plugin URI: https://wpcraft.net/
- * Description: IP addresses blocked using the WC Block IP Address feature will not be able to access the shop page instead, they will be redirected to a different page the block control by the start and end date. 
- * Version: 1.0.0
- * Tested up to: 6.8
+ * Description: Block unwanted IPs from accessing your WooCommerce shop,home and specific category redirect them to another page and control access with start and end dates. 
+ * Version: 1.0.2
+ * Tested up to: 6.9.1
  * Author: wpcraft
  * Requires Plugins: woocommerce
  * Author URI: https://github.com/devrashed
