@@ -16,7 +16,11 @@ const NewIp = ({ onIpAdded }) => {
     const [pageOption, setPageOption] = useState('');
 
     useEffect(() => {
-        axios.get(`${blocipadwoo.apiUrl}/wp/v2/product_cat`)
+        axios.get(`${blocipadwoo.apiUrl}/wooip/v1/product_categories`, {
+            headers: {
+                'X-WP-NONCE': blocipadwoo.nonce
+            }
+        })
             .then(res => {
                 setCategories(res.data);
             })

@@ -3,8 +3,8 @@
  * Plugin Name: Block IP Address for WooCommerce
  * Plugin URI: https://wpcraft.net/
  * Description: Block unwanted IPs from accessing your WooCommerce shop,home and specific category redirect them to another page and control access with start and end dates. 
- * Version: 1.0.2
- * Tested up to: 6.9.1
+ * Version: 1.0.3
+ * Tested up to: 6.9.4
  * Author: wpcraft
  * Requires Plugins: woocommerce
  * Author URI: https://github.com/devrashed
@@ -24,7 +24,31 @@ final class blocipadwoo_store {
         add_action('admin_enqueue_scripts', [$this, 'blocipadwoo_enqueue_scripts']);
         add_action('rest_api_init', [$this, 'blocipadwoo_rest_routes']);
         add_action('template_redirect', [$this, 'blocipadwoo_from_shop']); // Block access to shop
-        register_activation_hook(__FILE__, [$this, 'blocipadwoo_db_activate']);         
+        register_activation_hook(__FILE__, [$this, 'blocipadwoo_db_activate']);
+
+        // Disable LiteSpeed cache for plugin REST API requests
+        add_action('rest_api_init', [$this, 'blocipadwoo_disable_litespeed_cache']);
+    }
+
+    /* ========== Disable LiteSpeed Cache for REST API ================*/
+
+    public function blocipadwoo_disable_litespeed_cache() {
+        // Disable LiteSpeed cache for our REST API endpoints
+        if ( isset( $_SERVER['REQUEST_URI'] ) && 
+             ( strpos( $_SERVER['REQUEST_URI'], 'wooip/v1' ) !== false || 
+               strpos( $_SERVER['REQUEST_URI'], 'wprk/v1' ) !== false ) ) {
+            
+            // Tell LiteSpeed not to cache this request
+            if ( ! defined( 'LSCWP_V' ) ) {
+                return;
+            }
+            do_action( 'litespeed_control_set_nocache', 'blocipadwoo REST API' );
+            
+            // Also set no-cache headers
+            header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+            header( 'Pragma: no-cache' );
+            header( 'Expires: 0' );
+        }
     }   
 
     public function blocipadwoo_enqueue_scripts() {
@@ -53,8 +77,8 @@ final class blocipadwoo_store {
         $sql = "CREATE TABLE $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             ipaddress varchar(100) NOT NULL,
-            blocktype varchar(100) NOT NULL,
-            blkcategory varchar(100) NOT NULL,
+            blocktype varchar(100) NOT NULL DEFAULT '',
+            blkcategory varchar(100) NOT NULL DEFAULT '',
             startdate date NOT NULL,
             enddate date NOT NULL,
             redirect varchar(100) NOT NULL,
@@ -64,6 +88,15 @@ final class blocipadwoo_store {
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+
+        // Add missing columns for existing installations
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM $table_name");
+        if (!in_array('blocktype', $columns)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN blocktype varchar(100) NOT NULL DEFAULT '' AFTER ipaddress");
+        }
+        if (!in_array('blkcategory', $columns)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN blkcategory varchar(100) NOT NULL DEFAULT '' AFTER blocktype");
+        }
     }
 
     
@@ -102,7 +135,39 @@ final class blocipadwoo_store {
                 return current_user_can( 'manage_options' );
             }
         ]);
+
+        register_rest_route('wooip/v1', '/product_categories', [
+            'methods'  => 'GET',
+            'callback' => [$this, 'blocipadwoo_get_product_categories'],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            }
+        ]);
     
+    }
+
+    /* ========== Get WooCommerce Product Categories ================*/
+
+    public function blocipadwoo_get_product_categories() {
+        $categories = get_terms([
+            'taxonomy'   => 'product_cat',
+            'hide_empty' => false,
+        ]);
+
+        if (is_wp_error($categories)) {
+            return rest_ensure_response([]);
+        }
+
+        $result = [];
+        foreach ($categories as $cat) {
+            $result[] = [
+                'id'   => $cat->term_id,
+                'name' => html_entity_decode($cat->name),
+                'slug' => $cat->slug,
+            ];
+        }
+
+        return rest_ensure_response($result);
     }
 
  
@@ -200,7 +265,11 @@ final class blocipadwoo_store {
             $table_name = $wpdb->prefix . 'wooip_blockip_list';
             $employees = $wpdb->get_results("SELECT * FROM $table_name");
         
-            return rest_ensure_response($employees);
+            $response = rest_ensure_response($employees);
+            $response->header( 'Cache-Control', 'no-cache, no-store, must-revalidate' );
+            $response->header( 'Pragma', 'no-cache' );
+            $response->header( 'Expires', '0' );
+            return $response;
         }
         
 
@@ -347,12 +416,12 @@ final class blocipadwoo_store {
             if (!empty($blocked_ip)) return true;
         }
 
-        // Category-wise block (using category name)
+        // Category-wise block (using category name, case-insensitive)
         if (is_product_category()) {
             $category = get_queried_object();
-            $cat_name = $category ? $category->name : '';
+            $cat_name = $category ? html_entity_decode($category->name) : '';
             $blocked_ip = $wpdb->get_var($wpdb->prepare(
-                "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND blkcategory = %s AND startdate <= NOW() AND enddate >= NOW()",
+                "SELECT ipaddress FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND LOWER(blkcategory) = LOWER(%s) AND startdate <= NOW() AND enddate >= NOW()",
                 $user_ip, $cat_name
             ));
             if (!empty($blocked_ip)) return true;
@@ -396,12 +465,12 @@ final class blocipadwoo_store {
             }
         }
 
-        // Category-wise block (using category name)
+        // Category-wise block (using category name, case-insensitive)
         if (is_product_category()) {
             $category = get_queried_object();
-            $cat_name = $category ? $category->name : '';
+            $cat_name = $category ? html_entity_decode($category->name) : '';
             $redirect_url = $wpdb->get_var($wpdb->prepare(
-                "SELECT redirect FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND blkcategory = %s AND startdate <= NOW() AND enddate >= NOW()",
+                "SELECT redirect FROM $table_name WHERE ipaddress = %s AND blocktype = 'category' AND LOWER(blkcategory) = LOWER(%s) AND startdate <= NOW() AND enddate >= NOW()",
                 $user_ip, $cat_name
             ));
             if ($redirect_url) {

@@ -12,7 +12,11 @@ const IpManager = () => {
         axios.get(`${blocipadwoo.apiUrl}/wprk/v1/get_blkip`, {
             headers: {
                 'Content-Type': 'application/json',
-                'X-WP-NONCE': blocipadwoo.nonce
+                'X-WP-NONCE': blocipadwoo.nonce,
+                'Cache-Control': 'no-cache'
+            },
+            params: {
+                _t: Date.now() // Cache-busting for LiteSpeed
             }
         })
         .then((res) => {
