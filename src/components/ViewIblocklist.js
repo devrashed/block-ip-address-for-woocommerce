@@ -112,18 +112,10 @@ const ViewIblocklist = ({ blockedIps = [], refresh }) => {
                                     )}
                                 </td>
                                     <td>
-                                    {editingIndex === index ? (
-                                        <input type="text" value={editBlockType} onChange={(e) => setBlockType(e.target.value)} />
-                                    ) : (
-                                        ip.blocktype
-                                    )}
+                                    {ip.blocktype}
                                 </td>
                                 <td>
-                                    {editingIndex === index ? (
-                                        <input type="text" value={editBlockCategory} onChange={(e) => setBlockCategory(e.target.value)} />
-                                    ) : (
-                                        ip.blkcategory
-                                    )}
+                                    {ip.blkcategory}
                                 </td>
 
                                 <td>
